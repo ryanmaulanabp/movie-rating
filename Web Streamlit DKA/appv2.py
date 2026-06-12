@@ -12,7 +12,7 @@ from sklearn.preprocessing import StandardScaler
 
 # Set page config
 st.set_page_config(
-    page_title="Movie Rating Predictor v2: Fuzzy, ML & Deep Learning From Scratch",
+    page_title="Movie Rating Predictor: Fuzzy, ML & Deep Learning From Scratch",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -135,7 +135,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("Movie Rating Prediction Dashboard v2")
+st.title("Movie Rating Prediction Dashboard")
 st.markdown("### Integrated 5-Input Fuzzy Logic, Machine Learning & Deep Learning From Scratch")
 
 # Helper wrapper for trapezoidal integration to handle numpy version compatibility
@@ -544,9 +544,8 @@ tab1, tab2, tab3, tab4 = st.tabs([
 #  TAB 1: SINGLE PREDICTION DASHBOARD
 # ================================================================
 with tab1:
-    st.markdown("### Real-Time Model Inference Comparison (Hybrid Fuzzy Framework)")
+    st.markdown("### Real-Time Model Inference Comparison")
     
-    st.markdown("##### 1. Classical Fuzzy Inference Systems")
     col1, col2 = st.columns(2)
     with col1:
         st.markdown(f"""
@@ -565,7 +564,6 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
         
-    st.markdown("##### 2. Fuzzy-Driven Machine Learning Predictors")
     col3, col4, col5 = st.columns(3)
     with col3:
         st.markdown(f"""
@@ -592,7 +590,6 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown("##### 3. Fuzzy-Driven Deep Learning (Neural Network from Scratch)")
     col6, _ = st.columns([1, 2])
     with col6:
         st.markdown(f"""
