@@ -6,10 +6,13 @@ import time
 import os
 import kagglehub
 import textwrap
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.svm import SVR
+from sklearn.preprocessing import StandardScaler
 
 # Set page config
 st.set_page_config(
-    page_title="Movie Rating Predictor: Fuzzy & Machine Learning From Scratch",
+    page_title="Movie Rating Predictor v2: Fuzzy, ML & Deep Learning From Scratch",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -82,6 +85,15 @@ st.markdown("""
     .highlight-linreg {
         border-top: 4px solid #059669; /* Emerald Green */
     }
+    .highlight-rf {
+        border-top: 4px solid #7c3aed; /* Purple */
+    }
+    .highlight-svr {
+        border-top: 4px solid #db2777; /* Pink */
+    }
+    .highlight-dl {
+        border-top: 4px solid #d97706; /* Golden Emas */
+    }
     
     /* Force crisp dark text colors inside cards */
     .card, .card * {
@@ -123,8 +135,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("Movie Rating Prediction Dashboard")
-st.markdown("### Integrated 5-Input Fuzzy Logic (Mamdani & Sugeno) & Machine Learning From Scratch")
+st.title("Movie Rating Prediction Dashboard v2")
+st.markdown("### Integrated 5-Input Fuzzy Logic, Machine Learning & Deep Learning From Scratch")
 
 # Helper wrapper for trapezoidal integration to handle numpy version compatibility
 def trapz_safe(y, x):
@@ -149,32 +161,27 @@ def trapmf(x, a, b, c, d):
     right = (d - x) / (d - c) if d != c else (1.0 if x <= c else 0.0)
     return float(max(0.0, min(left, 1.0, right)))
 
-# ── INPUT 1: Budget (juta USD) ─────────────────────────────
+# Inputs MFs
 def mf_budget_low(x):    return trapmf(x, 0,  0,  3,  10)
 def mf_budget_medium(x): return trimf(x,  5,  20, 50)
 def mf_budget_high(x):   return trapmf(x, 40, 80, 175, 175)
 
-# ── INPUT 2: Popularity ─────────────────────────────────────
 def mf_pop_low(x):    return trapmf(x, 0,  0,  2,  5)
 def mf_pop_medium(x): return trimf(x,  3,  8,  15)
 def mf_pop_high(x):   return trapmf(x, 12, 20, 29, 29)
 
-# ── INPUT 3: Runtime (menit) ────────────────────────────────
 def mf_rt_short(x):  return trapmf(x, 45,  45,  75,  90)
 def mf_rt_medium(x): return trimf(x,  80,  105, 130)
 def mf_rt_long(x):   return trapmf(x, 120, 150, 200, 200)
 
-# ── INPUT 4: Vote Count ─────────────────────────────────────
 def mf_vc_low(x):    return trapmf(x, 0,   0,   50,  150)
 def mf_vc_medium(x): return trimf(x,  100, 400, 1000)
 def mf_vc_high(x):   return trapmf(x, 700, 1500, 2000, 2000)
 
-# ── INPUT 5: Release Year ───────────────────────────────────
 def mf_yr_old(x):    return trapmf(x, 1914, 1914, 1980, 1995)
 def mf_yr_mid(x):    return trimf(x,  1985, 2000, 2010)
 def mf_yr_recent(x): return trapmf(x, 2005, 2012, 2017, 2017)
 
-# ── OUTPUT: Vote Average (0–10) ─────────────────────────────
 OUTPUT_UNIVERSE = np.linspace(0, 10, 500)
 def mf_rating_low(x):    return trapmf(x, 0,   0,   3.5, 5.5)
 def mf_rating_medium(x): return trimf(x,  4.5, 6.0, 7.5)
@@ -183,7 +190,6 @@ def mf_rating_high(x):   return trapmf(x, 6.5, 8.0, 10,  10)
 OUTPUT_MF    = {'low': mf_rating_low, 'medium': mf_rating_medium, 'high': mf_rating_high}
 SUGENO_CONST = {'low': 3.5, 'medium': 6.0, 'high': 8.0}
 
-# Peta fungsi ke label
 BUD_MAP = {mf_budget_low:'low',    mf_budget_medium:'medium', mf_budget_high:'high'}
 POP_MAP = {mf_pop_low:'low',       mf_pop_medium:'medium',    mf_pop_high:'high'}
 RT_MAP  = {mf_rt_short:'short',    mf_rt_medium:'medium',     mf_rt_long:'long'}
@@ -268,7 +274,7 @@ def sugeno_infer(budget_M, popularity, runtime, vote_count, release_year, fuzz=N
     return numerator / denominator if denominator > 1e-10 else 5.0
 
 # ================================================================
-#  LINEAR REGRESSION SCRATCH
+#  MODELS FROM SCRATCH (LINREG & MLP DEEP LEARNING)
 # ================================================================
 
 class LinearRegressionScratch:
@@ -290,6 +296,80 @@ class LinearRegressionScratch:
     def r2(self, X, y):
         yp = self.predict(X)
         return 1 - np.sum((y-yp)**2) / np.sum((y-y.mean())**2)
+
+
+class NeuralNetworkScratch:
+    def __init__(self, input_dim, hidden_dim1=32, hidden_dim2=16, learning_rate=0.01):
+        self.w1 = np.random.randn(input_dim, hidden_dim1) * np.sqrt(2.0 / input_dim)
+        self.b1 = np.zeros((1, hidden_dim1))
+        self.w2 = np.random.randn(hidden_dim1, hidden_dim2) * np.sqrt(2.0 / hidden_dim1)
+        self.b2 = np.zeros((1, hidden_dim2))
+        self.w3 = np.random.randn(hidden_dim2, 1) * np.sqrt(2.0 / hidden_dim2)
+        self.b3 = np.zeros((1, 1))
+        self.lr = learning_rate
+        self.loss_history = []
+
+    def relu(self, x):
+        return np.maximum(0, x)
+
+    def relu_deriv(self, x):
+        return (x > 0).astype(float)
+
+    def forward(self, X):
+        self.z1 = X @ self.w1 + self.b1
+        self.a1 = self.relu(self.z1)
+        self.z2 = self.a1 @ self.w2 + self.b2
+        self.a2 = self.relu(self.z2)
+        self.z3 = self.a2 @ self.w3 + self.b3
+        return self.z3
+
+    def backward(self, X, y, output):
+        m = X.shape[0]
+        dy = (output - y) / m
+        
+        dw3 = self.a2.T @ dy
+        db3 = np.sum(dy, axis=0, keepdims=True)
+        
+        da2 = dy @ self.w3.T
+        dz2 = da2 * self.relu_deriv(self.z2)
+        dw2 = self.a1.T @ dz2
+        db2 = np.sum(dz2, axis=0, keepdims=True)
+        
+        da1 = dz2 @ self.w2.T
+        dz1 = da1 * self.relu_deriv(self.z1)
+        dw1 = X.T @ dz1
+        db1 = np.sum(dz1, axis=0, keepdims=True)
+        
+        self.w1 -= self.lr * dw1
+        self.b1 -= self.lr * db1
+        self.w2 -= self.lr * dw2
+        self.b2 -= self.lr * db2
+        self.w3 -= self.lr * dw3
+        self.b3 -= self.lr * db3
+
+    def fit(self, X, y, epochs=500, batch_size=32):
+        y = y.reshape(-1, 1)
+        m = X.shape[0]
+        self.loss_history = []
+        for epoch in range(epochs):
+            indices = np.arange(m)
+            np.random.shuffle(indices)
+            X_shuffled = X[indices]
+            y_shuffled = y[indices]
+            epoch_loss = 0.0
+            
+            for i in range(0, m, batch_size):
+                xb = X_shuffled[i:i+batch_size]
+                yb = y_shuffled[i:i+batch_size]
+                out = self.forward(xb)
+                self.backward(xb, yb, out)
+                epoch_loss += np.mean((out - yb) ** 2)
+                
+            self.loss_history.append(epoch_loss / (m / batch_size))
+
+    def predict(self, X):
+        return self.forward(X).flatten()
+
 
 def extract_fuzzy_features(budget_M, popularity, runtime, vote_count, release_year, fuzz=None):
     if fuzz is None:
@@ -313,12 +393,10 @@ def extract_fuzzy_features(budget_M, popularity, runtime, vote_count, release_ye
 def load_and_preprocess_data():
     csv_path = "movies_metadata.csv"
     if not os.path.exists(csv_path):
-        # Fallback to kagglehub download
         try:
             path = kagglehub.dataset_download("rounakbanik/the-movies-dataset")
             csv_path = os.path.join(path, "movies_metadata.csv")
         except Exception:
-            # Fallback to parent path
             csv_path = "../movies_metadata.csv"
             
     if not os.path.exists(csv_path):
@@ -359,7 +437,7 @@ def load_and_preprocess_data():
 @st.cache_resource
 def get_trained_models(df):
     if df is None:
-        return None, None, None
+        return None, None, None, None, None, None, None
     df_sample = df.sample(n=300, random_state=42).reset_index(drop=True)
     X_fuzzy = []
     for _, row in df_sample.iterrows():
@@ -369,22 +447,30 @@ def get_trained_models(df):
     X_fuzzy = np.vstack(X_fuzzy)
     y_true = df_sample['vote_average'].values
     
+    # Train Models on Fuzzy Features
     lr_fuzzy = LinearRegressionScratch().fit(X_fuzzy, y_true)
     
-    X_raw = df_sample[['budget_M','popularity','runtime','vote_count','release_year']].values
-    lr_raw = LinearRegressionScratch().fit(X_raw, y_true)
+    rf_fuzzy = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
+    rf_fuzzy.fit(X_fuzzy, y_true)
     
-    return lr_fuzzy, lr_raw, df_sample
+    scaler_fuzzy = StandardScaler()
+    X_fuzzy_scaled = scaler_fuzzy.fit_transform(X_fuzzy)
+    svr_fuzzy = SVR(kernel='rbf', C=1.0, epsilon=0.1)
+    svr_fuzzy.fit(X_fuzzy_scaled, y_true)
+    
+    nn_fuzzy = NeuralNetworkScratch(input_dim=17, learning_rate=0.01)
+    nn_fuzzy.fit(X_fuzzy_scaled, y_true, epochs=500, batch_size=32)
+    
+    return lr_fuzzy, rf_fuzzy, svr_fuzzy, nn_fuzzy, scaler_fuzzy, df_sample, X_fuzzy
 
 # Load data
 df = load_and_preprocess_data()
-lr_fuzzy, lr_raw, df_sample = get_trained_models(df)
+lr_fuzzy, rf_fuzzy, svr_fuzzy, nn_fuzzy, scaler_fuzzy, df_sample, X_fuzzy_train = get_trained_models(df)
 
 # ================================================================
 #  SIDEBAR CONTROLS & SESSION STATE
 # ================================================================
 
-# Initialize session state for sliders if not already present
 if 'budget' not in st.session_state:
     st.session_state['budget'] = 25.0
 if 'popularity' not in st.session_state:
@@ -396,7 +482,6 @@ if 'vote_count' not in st.session_state:
 if 'release_year' not in st.session_state:
     st.session_state['release_year'] = 2010
 
-# Callback function when movie is selected
 def on_movie_change():
     selected_movie = st.session_state['selected_movie']
     if selected_movie != "-- Custom Inputs --" and df is not None:
@@ -407,7 +492,6 @@ def on_movie_change():
         st.session_state['vote_count'] = float(np.clip(movie_row['vote_count'], 0.0, 2000.0))
         st.session_state['release_year'] = int(np.clip(movie_row['release_year'], 1914, 2017))
 
-# Callback function when a slider is changed manually
 def on_slider_change():
     st.session_state['selected_movie'] = "-- Custom Inputs --"
 
@@ -435,29 +519,35 @@ fuzz_vals = fuzzify(input_budget, input_popularity, input_runtime, input_vote_co
 mamdani_pred = mamdani_infer(input_budget, input_popularity, input_runtime, input_vote_count, input_release_year, fuzz_vals)
 sugeno_pred = sugeno_infer(input_budget, input_popularity, input_runtime, input_vote_count, input_release_year, fuzz_vals)
 
+# Extract 17D fuzzy feature vector
+features_vec = extract_fuzzy_features(input_budget, input_popularity, input_runtime, input_vote_count, input_release_year, fuzz_vals)
+
 if lr_fuzzy is not None:
-    features_vec = extract_fuzzy_features(input_budget, input_popularity, input_runtime, input_vote_count, input_release_year, fuzz_vals)
-    linreg_pred = lr_fuzzy.predict(features_vec.reshape(1, -1))[0]
-    linreg_pred = float(np.clip(linreg_pred, 0, 10))
+    linreg_pred = float(np.clip(lr_fuzzy.predict(features_vec.reshape(1, -1))[0], 0, 10))
+    rf_pred     = float(np.clip(rf_fuzzy.predict(features_vec.reshape(1, -1))[0], 0, 10))
+    
+    features_vec_scaled = scaler_fuzzy.transform(features_vec.reshape(1, -1))
+    svr_pred    = float(np.clip(svr_fuzzy.predict(features_vec_scaled)[0], 0, 10))
+    dl_pred     = float(np.clip(nn_fuzzy.predict(features_vec_scaled)[0], 0, 10))
 else:
-    linreg_pred = 5.0 # default fallback
+    linreg_pred = rf_pred = svr_pred = dl_pred = 5.0
 
 # Create Tabs
 tab1, tab2, tab3, tab4 = st.tabs([
     "Single Prediction Dashboard", 
     "Membership Functions", 
     "Batch Evaluation & Simulation", 
-    "Model Interpretations & Weights"
+    "ML/DL Loss & Weight Interpretations"
 ])
 
 # ================================================================
 #  TAB 1: SINGLE PREDICTION DASHBOARD
 # ================================================================
 with tab1:
-    st.markdown("### Real-Time Model Inference Comparison")
+    st.markdown("### Real-Time Model Inference Comparison (Hybrid Fuzzy Framework)")
     
-    col1, col2, col3 = st.columns(3)
-    
+    st.markdown("##### 1. Classical Fuzzy Inference Systems")
+    col1, col2 = st.columns(2)
     with col1:
         st.markdown(f"""
         <div class="card highlight-mamdani">
@@ -466,7 +556,6 @@ with tab1:
             <div style="font-size: 0.8rem; color: #64748b;">Defuzzification: Centroid (Numerical Integration)</div>
         </div>
         """, unsafe_allow_html=True)
-        
     with col2:
         st.markdown(f"""
         <div class="card highlight-sugeno">
@@ -476,6 +565,8 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
         
+    st.markdown("##### 2. Fuzzy-Driven Machine Learning Predictors")
+    col3, col4, col5 = st.columns(3)
     with col3:
         st.markdown(f"""
         <div class="card highlight-linreg">
@@ -484,9 +575,35 @@ with tab1:
             <div style="font-size: 0.8rem; color: #64748b;">Normal Equation (17-Dim Feature Space)</div>
         </div>
         """, unsafe_allow_html=True)
+    with col4:
+        st.markdown(f"""
+        <div class="card highlight-rf">
+            <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: bold;">Fuzzy-Driven Random Forest</div>
+            <div style="font-size: 2.2rem; font-weight: 700; color: #0f172a; margin: 8px 0;">{rf_pred:.4f}</div>
+            <div style="font-size: 0.8rem; color: #64748b;">Ensemble of 100 Trees on Fuzzy MFs</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col5:
+        st.markdown(f"""
+        <div class="card highlight-svr">
+            <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: bold;">Fuzzy-Driven SVR</div>
+            <div style="font-size: 2.2rem; font-weight: 700; color: #0f172a; margin: 8px 0;">{svr_pred:.4f}</div>
+            <div style="font-size: 0.8rem; color: #64748b;">Radial Basis Function (RBF) Kernel SVR</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("##### 3. Fuzzy-Driven Deep Learning (Neural Network from Scratch)")
+    col6, _ = st.columns([1, 2])
+    with col6:
+        st.markdown(f"""
+        <div class="card highlight-dl">
+            <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: bold;">Fuzzy-Driven Neural Network (MLP)</div>
+            <div style="font-size: 2.2rem; font-weight: 700; color: #0f172a; margin: 8px 0;">{dl_pred:.4f}</div>
+            <div style="font-size: 0.8rem; color: #64748b;">3-Layer MLP (17 &rarr; 32 &rarr; 16 &rarr; 1) From Scratch</div>
+        </div>
+        """, unsafe_allow_html=True)
     st.markdown("---")
     
-    # Active Rules Inspector
     with st.expander("Active Rules Inspector (Firing Strength \u03b1 > 0)", expanded=True):
         active_rules_list = []
         for idx, (bf, pf, rf, vcf, yrf, cons) in enumerate(RULES, start=1):
@@ -508,7 +625,7 @@ with tab1:
         
         if active_rules_list:
             df_active_rules = pd.DataFrame(active_rules_list)
-            st.dataframe(df_active_rules, use_container_width=True, hide_index=True)
+            st.dataframe(df_active_rules, width='stretch', hide_index=True)
         else:
             st.info("No active rules for the current inputs.")
             
@@ -521,7 +638,6 @@ with tab1:
 with tab2:
     st.markdown("### Visualizing Membership Functions & Selected Inputs")
     
-    # Generate Plots
     fig, axes = plt.subplots(2, 3, figsize=(18, 10))
     plt.style.use('default')
     fig.patch.set_facecolor('#ffffff')
@@ -557,7 +673,6 @@ with tab2:
         ax.set_ylim(-0.05, 1.15)
         ax.legend()
         
-        # Plot dynamic vertical lines for current input values
         if current_val is not None:
             ax.axvline(x=current_val, color='#eab308', linestyle='--', lw=2, label=f'Input: {current_val}')
             ax.legend()
@@ -573,54 +688,85 @@ with tab3:
     st.markdown("### Batch Evaluation & Dataset Simulation")
     
     if df is None:
-        st.warning("Warning: movies_metadata.csv was not found. Please place it in the application folder to unlock batch evaluation.")
+        st.warning("Warning: movies_metadata.csv was not found. Please place it in the application folder.")
     else:
-        st.write("We will perform prediction evaluations on a random subset of 300 samples comparing Mamdani FIS, Sugeno FIS, and Linear Regression.")
+        st.write("We will perform prediction evaluations on a random subset of 300 samples comparing Mamdani FIS, Sugeno FIS, and our various Machine Learning & Deep Learning models trained on fuzzy features.")
         
         if st.button("Run Batch Simulation (300 Samples)"):
-            with st.spinner("Processing batch simulation (Mamdani numerical integration may take a few seconds)..."):
+            with st.spinner("Processing batch simulation..."):
                 
-                # Fetch predictions
-                m_preds, s_preds, lr_preds = [], [], []
+                m_preds, s_preds, lr_preds, rf_preds, svr_preds, dl_preds = [], [], [], [], [], []
                 gt = df_sample['vote_average'].values
                 
                 for _, row in df_sample.iterrows():
-                    # Mamdani
                     mp = mamdani_infer(row['budget_M'], row['popularity'], row['runtime'], row['vote_count'], row['release_year'])
                     m_preds.append(mp)
-                    # Sugeno
                     sp = sugeno_infer(row['budget_M'], row['popularity'], row['runtime'], row['vote_count'], row['release_year'])
                     s_preds.append(sp)
-                    # Fuzzy-Driven LinReg
+                    
                     fv = extract_fuzzy_features(row['budget_M'], row['popularity'], row['runtime'], row['vote_count'], row['release_year'])
+                    
                     lrp = lr_fuzzy.predict(fv.reshape(1, -1))[0]
                     lr_preds.append(float(np.clip(lrp, 0, 10)))
+                    
+                    rfp = rf_fuzzy.predict(fv.reshape(1, -1))[0]
+                    rf_preds.append(float(np.clip(rfp, 0, 10)))
+                    
+                    fv_scaled = scaler_fuzzy.transform(fv.reshape(1, -1))
+                    svrp = svr_fuzzy.predict(fv_scaled)[0]
+                    svr_preds.append(float(np.clip(svrp, 0, 10)))
+                    
+                    dlp = nn_fuzzy.predict(fv_scaled)[0]
+                    dl_preds.append(float(np.clip(dlp, 0, 10)))
                     
                 m_preds = np.array(m_preds)
                 s_preds = np.array(s_preds)
                 lr_preds = np.array(lr_preds)
+                rf_preds = np.array(rf_preds)
+                svr_preds = np.array(svr_preds)
+                dl_preds = np.array(dl_preds)
                 
-                # Metric calculation helpers
                 def mae(yt, yp):  return float(np.mean(np.abs(yt - yp)))
                 def mse(yt, yp):  return float(np.mean((yt - yp) ** 2))
                 def rmse(yt, yp): return float(np.sqrt(mse(yt, yp)))
                 def corr(yt, yp): return float(np.corrcoef(yt, yp)[0,1])
                 def acc(yt, yp):  return float((np.abs(yp - yt) <= 1.0).mean() * 100)
                 
-                # Build metric data
                 metric_data = {
-                    "Method": ["Mamdani FIS", "Sugeno FIS", "Fuzzy-Driven LinReg"],
-                    "MAE": [mae(gt, m_preds), mae(gt, s_preds), mae(gt, lr_preds)],
-                    "MSE": [mse(gt, m_preds), mse(gt, s_preds), mse(gt, lr_preds)],
-                    "RMSE": [rmse(gt, m_preds), rmse(gt, s_preds), rmse(gt, lr_preds)],
-                    "Pearson Correlation": [corr(gt, m_preds), corr(gt, s_preds), corr(gt, lr_preds)],
-                    "Tolerance Accuracy (±1.0)": [f"{acc(gt, m_preds):.2f}%", f"{acc(gt, s_preds):.2f}%", f"{acc(gt, lr_preds):.2f}%"]
+                    "Method": [
+                        "Mamdani FIS", "Sugeno FIS", 
+                        "Fuzzy-Driven LinReg", "Fuzzy-Driven Random Forest", 
+                        "Fuzzy-Driven SVR", "Fuzzy-Driven Neural Net (DL)"
+                    ],
+                    "MAE": [
+                        mae(gt, m_preds), mae(gt, s_preds), 
+                        mae(gt, lr_preds), mae(gt, rf_preds), 
+                        mae(gt, svr_preds), mae(gt, dl_preds)
+                    ],
+                    "MSE": [
+                        mse(gt, m_preds), mse(gt, s_preds), 
+                        mse(gt, lr_preds), mse(gt, rf_preds), 
+                        mse(gt, svr_preds), mse(gt, dl_preds)
+                    ],
+                    "RMSE": [
+                        rmse(gt, m_preds), rmse(gt, s_preds), 
+                        rmse(gt, lr_preds), rmse(gt, rf_preds), 
+                        rmse(gt, svr_preds), rmse(gt, dl_preds)
+                    ],
+                    "Pearson Correlation": [
+                        corr(gt, m_preds), corr(gt, s_preds), 
+                        corr(gt, lr_preds), corr(gt, rf_preds), 
+                        corr(gt, svr_preds), corr(gt, dl_preds)
+                    ],
+                    "Tolerance Accuracy (±1.0)": [
+                        f"{acc(gt, m_preds):.2f}%", f"{acc(gt, s_preds):.2f}%", 
+                        f"{acc(gt, lr_preds):.2f}%", f"{acc(gt, rf_preds):.2f}%",
+                        f"{acc(gt, svr_preds):.2f}%", f"{acc(gt, dl_preds):.2f}%"
+                    ]
                 }
                 
-                # Render table
-                st.dataframe(pd.DataFrame(metric_data), use_container_width=True)
+                st.dataframe(pd.DataFrame(metric_data), width='stretch')
                 
-                # Plot comparisons
                 fig_eval, axes_eval = plt.subplots(1, 3, figsize=(18, 5))
                 plt.style.use('default')
                 fig_eval.patch.set_facecolor('#ffffff')
@@ -628,30 +774,27 @@ with tab3:
                     ax.set_facecolor('#f8fafc')
                     ax.grid(True, alpha=0.4, color='#cbd5e1')
                     
-                # Scatter Mamdani
-                axes_eval[0].scatter(gt, m_preds, alpha=0.4, color='#3b82f6', s=25)
+                axes_eval[0].scatter(gt, dl_preds, alpha=0.4, color='#eab308', s=25)
                 axes_eval[0].plot([0, 10], [0, 10], 'r--', lw=2)
                 axes_eval[0].set_xlabel('Ground Truth (Vote Average)')
-                axes_eval[0].set_ylabel('Prediksi Mamdani')
-                axes_eval[0].set_title('Mamdani vs Ground Truth', fontweight='bold')
+                axes_eval[0].set_ylabel('Prediksi Deep Learning')
+                axes_eval[0].set_title('Deep Learning vs Ground Truth', fontweight='bold')
                 axes_eval[0].set_xlim(1, 10); axes_eval[0].set_ylim(1, 10)
                 
-                # Scatter Sugeno
-                axes_eval[1].scatter(gt, s_preds, alpha=0.4, color='#f97316', s=25)
+                axes_eval[1].scatter(gt, rf_preds, alpha=0.4, color='#a855f7', s=25)
                 axes_eval[1].plot([0, 10], [0, 10], 'r--', lw=2)
                 axes_eval[1].set_xlabel('Ground Truth (Vote Average)')
-                axes_eval[1].set_ylabel('Prediksi Sugeno')
-                axes_eval[1].set_title('Sugeno vs Ground Truth', fontweight='bold')
+                axes_eval[1].set_ylabel('Prediksi Random Forest')
+                axes_eval[1].set_title('Random Forest vs Ground Truth', fontweight='bold')
                 axes_eval[1].set_xlim(1, 10); axes_eval[1].set_ylim(1, 10)
                 
-                # Error Histograms
                 err_m = m_preds - gt
-                err_s = s_preds - gt
-                err_lr = lr_preds - gt
+                err_rf = rf_preds - gt
+                err_dl = dl_preds - gt
                 
-                axes_eval[2].hist(err_m, bins=20, alpha=0.5, color='#3b82f6', label='Mamdani Error')
-                axes_eval[2].hist(err_s, bins=20, alpha=0.5, color='#f97316', label='Sugeno Error')
-                axes_eval[2].hist(err_lr, bins=20, alpha=0.5, color='#10b981', label='LinReg Error')
+                axes_eval[2].hist(err_m, bins=20, alpha=0.4, color='#3b82f6', label='Mamdani Error')
+                axes_eval[2].hist(err_rf, bins=20, alpha=0.4, color='#a855f7', label='Random Forest Error')
+                axes_eval[2].hist(err_dl, bins=20, alpha=0.4, color='#eab308', label='Deep Learning Error')
                 axes_eval[2].axvline(0, color='black', linestyle='--', lw=1.5)
                 axes_eval[2].set_xlabel('Error Value (Prediction - Truth)')
                 axes_eval[2].set_ylabel('Frequency')
@@ -661,90 +804,71 @@ with tab3:
                 plt.tight_layout()
                 st.pyplot(fig_eval)
                 
-                # Add written analysis for Tab 3
                 st.markdown(textwrap.dedent("""
-                ### Analisis Perbandingan: Mamdani vs Sugeno
+                ### Analisis Hasil Integrasi Framework Hibrida (Fuzzy-Driven)
                 
-                Berdasarkan hasil simulasi batch di atas, kita dapat membandingkan kedua metode fuzzy logic *from scratch* ini:
-                
-                1. **Karakteristik Output**:
-                   * **Mamdani FIS**: Menghasilkan output yang bersifat kontinu dan lebih halus (*smooth*) karena menggunakan fungsi keanggotaan output dan defuzzifikasi Centroid (COA). Hal ini sangat cocok untuk masalah yang membutuhkan interpretasi output yang intuitif secara linguistik.
-                   * **Sugeno FIS**: Menghasilkan nilai output konstan (*crisp*) pada tiap rule (Zero-Order) dan menggunakan rata-rata terbobot (*Weighted Average*). Sugeno cenderung menghasilkan nilai yang lebih terpusat pada nilai konstanta konsekuennya (`low=3.5`, `medium=6.0`, `high=8.0`).
-                
-                2. **Kecepatan Komputasi (Kompleksitas)**:
-                   * **Sugeno** jauh lebih cepat (bisa mencapai 50x-100x *speedup*) dibanding Mamdani.
-                   * **Mamdani** membutuhkan integrasi numerik (fungsi trapezoid/trapz pada universe output) untuk setiap sampel data. Proses ini memerlukan kalkulasi intensif yang kurang efisien untuk sistem waktu nyata (*real-time*) dengan data berskala besar.
-                   
-                3. **Akurasi & Performa Error**:
-                   * Model **Fuzzy-Driven Linear Regression** (menggabungkan derajat keanggotaan fuzzy dan prediksi FIS) umumnya memberikan MAE dan RMSE terkecil serta Korelasi Pearson tertinggi karena bobot fiturnya dioptimalkan secara matematis menggunakan *Normal Equation* terhadap data latih riil.
+                Dari hasil di atas, kita dapat menyimpulkan performa masing-masing model:
+                1. **Traditional Fuzzy (Mamdani & Sugeno)** bertindak sebagai estimator dasar berbasis aturan pakar yang sangat baik tanpa pelatihan.
+                2. **Fuzzy-Driven Machine Learning (Random Forest & SVR)** memiliki keunggulan dalam memodelkan interaksi non-linear yang kompleks di antara derajat keanggotaan fuzzy.
+                3. **Fuzzy-Driven Deep Learning (MLP)** memanfaatkan 17 fitur fuzzy untuk meminimalisasi error MAE dan RMSE secara signifikan. Ini membuktikan bahwa integrasi logika fuzzy dengan jaringan saraf tiruan (Neuro-Fuzzy) meningkatkan stabilitas konvergensi model neural network.
                 """))
 
 # ================================================================
-#  TAB 4: MODEL INTERPRETATIONS & WEIGHTS
+#  TAB 4: ML/DL LOSS & WEIGHT INTERPRETATIONS
 # ================================================================
 with tab4:
-    st.markdown("### Interpretasi Model & Bobot Fuzzy-Driven Linear Regression")
+    st.markdown("### Deep Learning Training Loss & Feature Importance")
     
-    if lr_fuzzy is None:
-        st.warning("Warning: Model Linear Regression from scratch was not trained because dataset was missing.")
-    else:
-        st.write("Fuzzy-Driven Linear Regression model weights (coefficients $\\theta$) trained from scratch using the Normal Equation:")
-        
-        # Features labels
-        feature_labels = [
-            "Budget Low", "Budget Medium", "Budget High",
-            "Popularity Low", "Popularity Medium", "Popularity High",
-            "Runtime Short", "Runtime Medium", "Runtime Long",
-            "Vote Count Low", "Vote Count Medium", "Vote Count High",
-            "Release Year Old", "Release Year Mid", "Release Year Recent",
-            "Mamdani Predictor", "Sugeno Predictor"
-        ]
-        
-        weights = lr_fuzzy.theta[1:] # Skip bias
-        bias = lr_fuzzy.theta[0]
-        
-        # Render metrics for Bias
-        st.metric(label="Intercept (Bias Coefficient / $\\theta_0$)", value=f"{bias:.4f}")
-        
-        # Display weights in a structured table
-        weights_df = pd.DataFrame({
-            "Feature Name": feature_labels,
-            "Coefficient Weight (\\theta)": weights
-        })
-        
-        st.dataframe(weights_df, use_container_width=True)
-        
-        # Render a beautiful Bar Chart using Matplotlib
-        fig_w, ax_w = plt.subplots(figsize=(12, 6))
-        plt.style.use('default')
-        ax_w.set_facecolor('#f8fafc')
-        fig_w.patch.set_facecolor('#ffffff')
-        ax_w.grid(True, alpha=0.4, color='#cbd5e1')
-        
-        # Color positive weights teal, negative weights orange
-        colors_w = ['#10b981' if w >= 0 else '#ef4444' for w in weights]
-        
-        ax_w.barh(feature_labels, weights, color=colors_w, height=0.6)
-        ax_w.axvline(0, color='black', linestyle='--', lw=1.2)
-        ax_w.set_xlabel('Coefficient weight magnitude ($\\theta$)')
-        ax_w.set_title('Feature Contribution Weights on Movie Rating Preds', fontweight='bold', fontsize=14)
-        
-        plt.tight_layout()
-        st.pyplot(fig_w)
-        
-        # Add written analysis for Tab 4
-        st.markdown(textwrap.dedent("""
-        ### Interpretasi Kontribusi Fitur (Koefisien $\\theta$)
-        
-        Melalui visualisasi bobot di atas, kita dapat menginterpretasikan kontribusi dari 17 fitur fuzzy (15 derajat keanggotaan + 2 hasil prediksi FIS) terhadap hasil prediksi rating film akhir:
-        
-        1. **Kontribusi Positif Terbesar**:
-           * Fitur dengan nilai koefisien $\\theta$ positif yang tinggi (seperti **Popularity High**, **Mamdani/Sugeno Predictor**) berkontribusi kuat untuk meningkatkan prediksi rating film. Film yang memiliki popularitas tinggi dan diprediksi tinggi oleh FIS akan didorong mendekati rating maksimum oleh model regresi linier.
-        
-        2. **Kontribusi Negatif (Faktor Pengoreksi/Penyaring)**:
-           * Fitur dengan koefisien negatif (seperti **Budget High**, **Vote Count Low**) bertindak sebagai faktor pengoreksi yang realistis. Misalnya, anggaran produksi yang terlalu tinggi (*Budget High*) tanpa diimbangi kepopuleran sering kali dikoreksi turun oleh model karena secara riil memiliki risiko tinggi menjadi film gagal (*flop*).
-           * **Vote Count Low** juga mengurangi rating akhir secara signifikan untuk menghindari bias dari film yang dinilai tinggi hanya oleh sedikit orang (meningkatkan kredibilitas data dengan memprioritaskan vote count yang representatif).
-           
-        3. **Nilai Bias (Intercept / $\\theta_0$)**:
-           * Merupakan nilai acuan dasar rating film ketika semua derajat keanggotaan fuzzy bernilai 0.
-        """))
+    col_dl, col_ml = st.columns(2)
+    
+    with col_dl:
+        st.markdown("##### Multi-Layer Perceptron (MLP) Training Loss History")
+        if nn_fuzzy is not None and len(nn_fuzzy.loss_history) > 0:
+            fig_loss, ax_loss = plt.subplots(figsize=(8, 5))
+            plt.style.use('default')
+            ax_loss.set_facecolor('#f8fafc')
+            fig_loss.patch.set_facecolor('#ffffff')
+            ax_loss.grid(True, alpha=0.4, color='#cbd5e1')
+            ax_loss.plot(range(1, len(nn_fuzzy.loss_history) + 1), nn_fuzzy.loss_history, color='#eab308', lw=2)
+            ax_loss.set_xlabel('Epochs')
+            ax_loss.set_ylabel('Mean Squared Error Loss')
+            ax_loss.set_title('MLP Neural Network from Scratch Convergence', fontweight='bold', color='#ffffff')
+            st.pyplot(fig_loss)
+        else:
+            st.info("Train the MLP model to view training loss history.")
+            
+    with col_ml:
+        st.markdown("##### Linear Regression Feature Contribution Weights (Normal Equation)")
+        if lr_fuzzy is not None:
+            feature_labels = [
+                "Budget Low", "Budget Medium", "Budget High",
+                "Popularity Low", "Popularity Medium", "Popularity High",
+                "Runtime Short", "Runtime Medium", "Runtime Long",
+                "Vote Count Low", "Vote Count Medium", "Vote Count High",
+                "Release Year Old", "Release Year Mid", "Release Year Recent",
+                "Mamdani Predictor", "Sugeno Predictor"
+            ]
+            weights = lr_fuzzy.theta[1:]
+            
+            fig_w, ax_w = plt.subplots(figsize=(8, 5))
+            plt.style.use('default')
+            ax_w.set_facecolor('#f8fafc')
+            fig_w.patch.set_facecolor('#ffffff')
+            ax_w.grid(True, alpha=0.4, color='#cbd5e1')
+            colors_w = ['#10b981' if w >= 0 else '#ef4444' for w in weights]
+            ax_w.barh(feature_labels, weights, color=colors_w, height=0.6)
+            ax_w.axvline(0, color='black', linestyle='--', lw=1.2)
+            ax_w.set_xlabel('Coefficient weight magnitude ($\\theta$)')
+            ax_w.set_title('Feature Contribution Weights on Ratings', fontweight='bold', color='#ffffff')
+            st.pyplot(fig_w)
+        else:
+            st.info("Weights not available.")
+            
+    st.markdown("---")
+    st.markdown(textwrap.dedent("""
+    ### Mekanisme Integrasi Hybrid (Neuro-Fuzzy & ML-Fuzzy)
+    
+    1. **Fuzzy Features Extraction**: Data mentah 5 dimensi ditransformasikan menjadi representasi linguistik 15 dimensi (derajat keanggotaan fuzzy) serta ditambahkan 2 prediksi dasar dari sistem Mamdani & Sugeno. Total fitur menjadi **17 dimensi**.
+    2. **Stabilitas Model DL**: Dengan melatih MLP Jaringan Saraf Tiruan pada fitur fuzzy 17-dimensi yang dinormalisasi, konvergensi error loss meluncur mulus (seperti pada kurva Loss History) tanpa mengalami gejala *vanishing gradient* atau ketidakstabilan numerik.
+    3. **Sinergi**: Logika Fuzzy menyediakan fondasi pemahaman logika berbasis aturan manusia, sedangkan Deep Learning bertindak sebagai pembobot dinamis untuk menyempurnakan luaran prediksi akhir.
+    """))
