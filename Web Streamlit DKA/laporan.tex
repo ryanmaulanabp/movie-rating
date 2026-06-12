@@ -1,0 +1,435 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[bahasa]{babel}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{cite}
+\usepackage{microtype}
+\usepackage{indentfirst}
+
+\geometry{
+    top=3cm,
+    bottom=3cm,
+    left=3cm,
+    right=3cm
+}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={Analisis Komparatif Logika Fuzzy Metode Mamdani dan Sugeno dengan Pendekatan Hybrid Machine Learning dan Deep Learning},
+    pdfpagemode=FullScreen,
+}
+
+\begin{document}
+
+% TITLE & AUTHORS
+\begin{center}
+    \large\bfseries ANALISIS KOMPARATIF LOGIKA FUZZY METODE MAMDANI DAN SUGENO DENGAN PENDEKATAN HYBRID MACHINE LEARNING DAN DEEP LEARNING UNTUK PREDIKSI RATING FILM\\
+    \vspace{0.4cm}
+    \small\mdseries Tugas Besar Dasar Kecerdasan Artifisial\\
+    \vspace{0.5cm}
+    \textbf{Disusun Oleh:}
+    \vspace{0.2cm}
+    
+    \begin{tabular}{cc}
+        \textbf{Nama} & \textbf{NIM} \\
+        \hline
+        Ryan Maulana Bagus Putra & 103012430029 \\
+        Azmi Hanif Fauzil Islami & 103012420018 \\
+        Aloysius Axel Adriano & 103012400419 \\
+    \end{tabular}
+    
+    \vspace{0.6cm}
+    \small School of Computing, Telkom University \\
+    Bandung, Jawa Barat, Indonesia\\
+\end{center}
+
+\vspace{0.4cm}
+
+% RINGKASAN (ABSTRAK)
+\begin{abstract}
+Laporan ini membahas pengembangan dan evaluasi sistem prediksi rating film (\textit{vote\_average}) menggunakan Sistem Inferensi Fuzzy (\textit{Fuzzy Inference System}, FIS) metode Mamdani dan Sugeno yang dibangun secara \textit{from scratch} dengan lima variabel input, yaitu \textit{budget}, \textit{popularity}, \textit{runtime}, \textit{vote\_count}, dan \textit{release\_year}. Dataset yang digunakan berasal dari The Movies Dataset (TMDb) yang setelah proses pembersihan menyisakan 8.094 baris data bersih. Sistem dibangun dengan 27 \textit{rule base} menggunakan operator MIN untuk implikasi dan operator MAX untuk agregasi, dengan defuzzifikasi Centroid untuk Mamdani dan Weighted Average untuk Sugeno. Untuk mengatasi keterbatasan akurasi sistem berbasis aturan manual, derajat keanggotaan fuzzy dan hasil inferensi FIS diekstrak menjadi vektor fitur fuzzy berdimensi 17 dan diintegrasikan ke dalam beberapa model Machine Learning (\textit{Linear Regression, Random Forest, Support Vector Regression}) serta model Deep Learning berupa \textit{Multi-Layer Perceptron} (MLP) yang juga dibangun \textit{from scratch} menggunakan NumPy. Seluruh sistem kemudian diimplementasikan ke dalam dashboard web interaktif berbasis Streamlit yang memungkinkan pengguna membandingkan prediksi seluruh model secara real-time. Hasil pengujian menunjukkan bahwa Sugeno secara konsisten lebih unggul dibandingkan Mamdani baik dari segi akurasi prediksi maupun kompleksitas waktu komputasi, sedangkan model Random Forest berbasis fitur fuzzy menghasilkan performa prediksi terbaik secara keseluruhan pada simulasi batch dashboard.
+
+\vspace{0.3cm}
+\noindent \textbf{Kata Kunci:} Logika Fuzzy, Mamdani, Sugeno, Random Forest, Multi-Layer Perceptron, Streamlit, Prediksi Rating Film.
+\end{abstract}
+
+\newpage
+
+% 1 PENDAHULUAN
+\section{Pendahuluan}
+\subsection{Latar Belakang}
+Rating sebuah film (\textit{vote\_average}) dipengaruhi oleh banyak faktor produksi yang sifatnya tidak selalu memiliki batas yang tegas. Sebagai contoh, sebuah film dengan anggaran (\textit{budget}) tertentu tidak dapat begitu saja dikategorikan sebagai film bermodal "rendah" atau "tinggi" secara mutlak, karena batas tersebut bersifat samar dan bergantung pada konteks. Logika klasik yang hanya mengenal nilai biner (benar atau salah) tidak mampu merepresentasikan ambiguitas semacam ini secara alami. Logika Fuzzy yang diperkenalkan oleh Zadeh menawarkan kerangka kerja untuk merepresentasikan konsep linguistik seperti "rendah", "sedang", dan "tinggi" ke dalam derajat keanggotaan pada rentang nol hingga satu, sehingga penalaran berbasis pengetahuan pakar dapat diterjemahkan ke dalam sistem komputasi.
+
+Meskipun sistem Fuzzy berbasis aturan (\textit{rule based}) mampu meniru penalaran manusia, akurasinya sangat dibatasi oleh rancangan fungsi keanggotaan dan aturan yang disusun secara manual sehingga rawan bias subjektif. Oleh karena itu, pendekatan hybrid yang menggabungkan keluaran sistem Fuzzy dengan algoritma Machine Learning dan Deep Learning menjadi relevan untuk dieksplorasi guna meningkatkan akurasi prediksi tanpa menghilangkan interpretabilitas pengetahuan pakar.
+
+\subsection{Rumusan Masalah dan Tujuan}
+Berdasarkan latar belakang tersebut, laporan ini berfokus pada tiga rumusan masalah utama:
+\begin{enumerate}
+    \item Bagaimana perbandingan kinerja, akurasi, dan kompleksitas waktu komputasi antara metode defuzzifikasi Mamdani dan Sugeno pada sistem prediksi rating film dengan lima variabel input?
+    \item Sejauh mana integrasi derajat keanggotaan dan hasil inferensi Fuzzy sebagai fitur tambahan (\textit{fuzzy features}) dapat meningkatkan performa model Machine Learning (\textit{Linear Regression, Random Forest}, dan \textit{Support Vector Regression}) dibandingkan dengan hanya menggunakan fitur mentah (\textit{raw input})?
+    \item Bagaimana performa model Deep Learning berupa \textit{Multi-Layer Perceptron} yang dibangun \textit{from scratch} ketika dilatih menggunakan fitur fuzzy dibandingkan dengan fitur mentah, serta bagaimana keseluruhan sistem dapat diimplementasikan ke dalam dashboard interaktif berbasis Streamlit?
+\end{enumerate}
+
+% 2 TINJAUAN PUSTAKA
+\section{Tinjauan Pustaka}
+\subsection{Teori Himpunan Fuzzy}
+Teori himpunan fuzzy pertama kali dikemukakan oleh Prof. Lotfi A. Zadeh pada tahun 1965 di University of California, Berkeley. Berbeda dengan himpunan klasik yang hanya mengenal keanggotaan penuh (1) atau tidak menjadi anggota sama sekali (0), himpunan fuzzy memperkenalkan derajat keanggotaan (\textit{degree of truth}) yang bernilai kontinu pada rentang tertutup $[0, 1]$. Pendekatan ini memungkinkan representasi konsep linguistik yang bersifat samar, seperti "popularitas tinggi" atau "durasi pendek", ke dalam bentuk numerik yang dapat diproses oleh komputer.
+
+Dua fungsi keanggotaan dasar yang digunakan pada sistem ini, yaitu fungsi segitiga (\textit{triangular}) dan trapesium (\textit{trapezoidal}), didefinisikan secara \textit{from scratch} sebagai berikut.
+
+\begin{equation}
+\mu_{\text{trimf}}(x; a, b, c) = \max\left(0, \min\left(\frac{x-a}{b-a}, \frac{c-x}{c-b}\right)\right)
+\end{equation}
+
+\begin{equation}
+\mu_{\text{trapmf}}(x; a, b, c, d) = \max\left(0, \min\left(\frac{x-a}{b-a}, 1, \frac{d-x}{d-c}\right)\right)
+\end{equation}
+
+\noindent dengan $x$ merupakan nilai input, sedangkan $a, b, c$, dan $d$ merupakan titik-titik batas (parameter bentuk) yang ditentukan berdasarkan kombinasi \textit{expert knowledge} dan nilai kuartil statistik dari distribusi data.
+
+\subsection{Metode Inferensi Mamdani dan Sugeno}
+Dalam proses penalaran (\textit{reasoning}), dua arsitektur \textit{Fuzzy Inference System} yang paling umum digunakan adalah Mamdani dan Sugeno.
+\begin{itemize}
+    \item \textbf{Mamdani.} Pada metode Mamdani, keluaran setiap aturan berupa himpunan fuzzy yang kemudian diagregasi menggunakan operator MAX. Proses pengembalian ke nilai tegas (defuzzifikasi) dilakukan menggunakan metode Titik Berat (\textit{Centroid of Area}, COA) yang menghitung pusat area di bawah kurva hasil agregasi:
+    \begin{equation}
+    z_{\text{Mamdani}} = \frac{\int z \cdot \mu_{\text{agg}}(z) \, dz}{\int \mu_{\text{agg}}(z) \, dz}
+    \end{equation}
+    
+    \item \textbf{Sugeno.} Pada metode Sugeno orde nol, keluaran setiap aturan berupa konstanta tunggal (\textit{singleton}). Defuzzifikasi dilakukan menggunakan Rata-rata Terbobot (\textit{Weighted Average}) yang membuat komputasinya jauh lebih efisien dibandingkan integrasi numerik pada Mamdani:
+    \begin{equation}
+    z_{\text{Sugeno}} = \frac{\sum_{i=1}^{n} \alpha_i \cdot c_i}{\sum_{i=1}^{n} \alpha_i}
+    \end{equation}
+\end{itemize}
+
+\noindent dengan $\alpha_i$ merupakan \textit{firing strength} (derajat pemenuhan) aturan ke-$i$ yang diperoleh melalui operator AND berupa fungsi minimum dari seluruh derajat keanggotaan anteseden, dan $c_i$ merupakan konstanta konsekuen pada aturan ke-$i$.
+
+\begin{equation}
+\alpha_i = \min\left(\mu_{A_i}(x_1), \mu_{B_i}(x_2), \dots, \mu_{E_i}(x_5)\right)
+\end{equation}
+
+% 3 METODOLOGI
+\section{Metodologi Penelitian}
+\subsection{Dataset dan Pra-pemrosesan Data}
+Dataset yang digunakan adalah \textit{The Movies Dataset} yang bersumber dari TMDb (\textit{The Movie Database}) melalui Kaggle, dengan jumlah data mentah sebanyak 45.466 baris dan 24 kolom metadata film. Lima variabel input dan satu variabel output yang digunakan pada sistem Fuzzy ditampilkan pada Tabel~\ref{tab:variabel}.
+
+\begin{table}[H]
+\centering
+\caption{Variabel Input dan Output Sistem Fuzzy}
+\label{tab:variabel}
+\begin{tabular}{clll}
+\toprule
+\textbf{\#} & \textbf{Variabel} & \textbf{Keterangan} & \textbf{Satuan} \\
+\midrule
+1 & budget & Anggaran produksi film & USD (Juta) \\
+2 & popularity & Skor popularitas TMDb & Numerik \\
+3 & runtime & Durasi film & Menit \\
+4 & vote\_count & Jumlah pemberi rating & Jumlah orang \\
+5 & release\_year & Tahun rilis film & Tahun \\
+Output & vote\_average & Rating film & Skala 0-10 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Tahapan pra-pemrosesan meliputi konversi tipe data numerik, ekstraksi tahun rilis dari kolom \textit{release\_date}, penghapusan baris dengan nilai kosong atau bernilai nol pada variabel-variabel utama, serta penghapusan outlier menggunakan metode \textit{Interquartile Range} (IQR) pada persentil 1\% dan 99\% untuk setiap variabel input. Setelah seluruh tahapan tersebut, dataset bersih yang digunakan untuk evaluasi sistem berjumlah 8.094 baris, dengan ringkasan statistik deskriptif ditampilkan pada Tabel~\ref{tab:statistik}.
+
+\begin{table}[H]
+\centering
+\caption{Statistik Deskriptif Dataset Bersih (8.094 baris)}
+\label{tab:statistik}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Statistik} & \textbf{Budget (M\$)} & \textbf{Popularity} & \textbf{Runtime (menit)} & \textbf{Vote Count} & \textbf{Release Year} & \textbf{Vote Average} \\
+\midrule
+Mean & 19.81 & 6.76 & 105.40 & 363.75 & 1999.60 & 6.05 \\
+Std & 27.72 & 4.78 & 19.18 & 624.81 & 16.89 & 1.03 \\
+Min & 0.00 & 0.09 & 55.00 & 2.00 & 1914.00 & 0.70 \\
+Max & 175.00 & 29.13 & 182.00 & 4172.00 & 2017.00 & 10.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Tahap Fuzzifikasi (Fungsi Keanggotaan)}
+Setiap variabel input dan output dipetakan ke dalam tiga himpunan fuzzy linguistik (\textit{Low/Short/Old}, \textit{Medium/Mid}, \textit{High/Long/Recent}) menggunakan kombinasi fungsi trapesium pada sisi ekstrem dan fungsi segitiga pada sisi tengah. Batas-batas parameter ditentukan berdasarkan kombinasi \textit{expert knowledge} dengan nilai kuartil ($P_{25}, P_{50}, P_{75}$) dari distribusi masing-masing variabel pada Tabel~\ref{tab:statistik}. Visualisasi keenam fungsi keanggotaan (lima input dan satu output) beserta posisi sebuah input contoh ditunjukkan pada Gambar~\ref{fig:membership}.
+
+\begin{figure}[H]
+    \centering
+    % Catatan: sesuaikan path gambar saat melakukan kompilasi lokal
+    \includegraphics[width=0.9\textwidth]{1781275777904_image.png}
+    \caption{Visualisasi Fungsi Keanggotaan untuk 5 Variabel Input dan 1 Variabel Output pada Dashboard Streamlit}
+    \label{fig:membership}
+\end{figure}
+
+\subsection{Rule Base dan Sistem Inferensi}
+Dengan lima variabel input, basis pengetahuan (\textit{rule base}) diperluas menjadi 27 aturan IF-THEN yang mencakup kombinasi kondisi \textit{budget}, \textit{popularity}, dan \textit{runtime} sebagai inti aturan, dengan \textit{vote\_count} dan \textit{release\_year} sebagai variabel \textit{modifier} yang memperkuat atau memperlemah keyakinan terhadap aturan. Sebagai ilustrasi, beberapa aturan disajikan berikut:
+\begin{itemize}
+    \item \textbf{R1:} JIKA \textit{budget} = Low AND \textit{popularity} = Low AND \textit{runtime} = Short AND \textit{vote\_count} = Low AND \textit{release\_year} = Recent MAKA \textit{rating} = Low
+    \item \textbf{R5:} JIKA \textit{budget} = Low AND \textit{popularity} = High AND \textit{runtime} = Medium AND \textit{vote\_count} = High AND \textit{release\_year} = Recent MAKA \textit{rating} = High
+    \item \textbf{R10:} JIKA \textit{budget} = Medium AND \textit{popularity} = Low AND \textit{runtime} = Short AND \textit{vote\_count} = Low AND \textit{release\_year} = Recent MAKA \textit{rating} = Low
+\end{itemize}
+
+Setiap aturan dievaluasi menggunakan operator MIN (AND) untuk memperoleh \textit{firing strength} $\alpha_i$ sesuai Persamaan (5). Pada metode Mamdani, hasil implikasi setiap aturan diagregasi menggunakan operator MAX sebelum didefuzzifikasi dengan metode Centroid (Persamaan 3). Pada metode Sugeno, setiap aturan memiliki konsekuen berupa konstanta tunggal (\textit{Low} = 3.5, \textit{Medium} = 6.0, \textit{High} = 8.0) yang kemudian digabungkan menggunakan \textit{Weighted Average} (Persamaan 4).
+
+\subsection{Pendekatan Hybrid Machine Learning}
+Untuk mengatasi keterbatasan akurasi sistem \textit{rule-based} manual, derajat keanggotaan dari kelima variabel input (15 nilai) digabungkan dengan hasil prediksi Mamdani dan Sugeno (2 nilai) sehingga membentuk vektor fitur fuzzy berdimensi 17. Vektor fitur ini digunakan sebagai input bagi tiga model Machine Learning berikut, yang hasilnya dibandingkan dengan model yang dilatih menggunakan lima fitur mentah (\textit{raw input}):
+\begin{enumerate}
+    \item \textbf{Linear Regression (from scratch)} menggunakan \textit{Normal Equation}:
+    \begin{equation}
+    \theta = (X^T X)^{-1} X^T y
+    \end{equation}
+    \item \textbf{Random Forest Regressor} (\textit{scikit-learn}, 100 estimator) sebagai model \textit{ensemble} berbasis pohon keputusan.
+    \item \textbf{Support Vector Regression} (\textit{scikit-learn}, kernel RBF) dengan fitur yang distandarisasi terlebih dahulu menggunakan \textit{StandardScaler}.
+\end{enumerate}
+
+Seluruh data dibagi menjadi data latih dan data uji dengan rasio 80:20 menggunakan pembagian acak (\textit{random permutation}, seed = 42).
+
+\subsection{Pendekatan Deep Learning (Multi-Layer Perceptron from Scratch)}
+Sesuai dengan ketentuan tugas besar, model Deep Learning dibangun secara \textit{from scratch} menggunakan NumPy tanpa memanfaatkan pustaka framework seperti PyTorch maupun TensorFlow. Arsitektur jaringan yang digunakan adalah \textit{Multi-Layer Perceptron} (MLP) dengan satu lapisan input (5 neuron untuk fitur mentah atau 17 neuron untuk fitur fuzzy), dua lapisan tersembunyi (32 dan 16 neuron) dengan fungsi aktivasi ReLU, serta satu lapisan output (1 neuron) dengan aktivasi linear untuk memprediksi nilai rating film secara kontinu. Bobot diinisialisasi menggunakan metode Xavier/Glorot.
+
+\begin{equation}
+f(z) = \max(0, z)
+\end{equation}
+
+\begin{equation}
+a^{(1)} = f(X \cdot W^{(1)} + b^{(1)})
+\end{equation}
+
+\begin{equation}
+a^{(2)} = f(a^{(1)} \cdot W^{(2)} + b^{(2)})
+\end{equation}
+
+\begin{equation}
+\hat{y} = a^{(2)} \cdot W^{(3)} + b^{(3)}
+\end{equation}
+
+Proses pelatihan menggunakan fungsi rugi \textit{Mean Squared Error} (MSE) yang diminimalkan melalui algoritma \textit{backpropagation} dengan optimasi \textit{Stochastic Gradient Descent} (SGD):
+
+\begin{equation}
+L = \frac{1}{m} \sum_{j=1}^{m} (\hat{y}^{(j)} - y^{(j)})^2
+\end{equation}
+
+\begin{equation}
+W^{(l)} \leftarrow W^{(l)} - \eta \frac{\partial L}{\partial W^{(l)}}
+\end{equation}
+
+\noindent dengan $\eta$ merupakan \textit{learning rate}. Model dilatih selama 500 epoch baik pada fitur mentah maupun fitur fuzzy untuk membandingkan kemampuan generalisasi kedua representasi fitur tersebut. Kurva penurunan nilai loss (MSE) terhadap epoch pada pelatihan MLP ditampilkan pada Gambar~\ref{fig:loss_weight}.
+
+\subsection{Implementasi Antarmuka Web (Streamlit)}
+Seluruh sistem, mulai dari \textit{Fuzzy Inference System} (Mamdani dan Sugeno), model Machine Learning (\textit{Linear Regression, Random Forest, SVR}), hingga model Deep Learning (\textit{MLP from scratch}), diintegrasikan ke dalam sebuah dashboard web interaktif berbasis Streamlit. Dashboard terdiri atas empat tab utama, yaitu \textit{Single Prediction Dashboard}, \textit{Membership Functions}, \textit{Batch Evaluation and Simulation}, serta \textit{ML/DL Loss and Weight Interpretations}. Pengguna dapat mengatur nilai kelima variabel input melalui slider pada panel sisi kiri, dan seluruh model akan menghasilkan prediksi secara real-time tanpa perlu menjalankan ulang notebook. 
+
+Tampilan tab \textit{Single Prediction Dashboard} ditunjukkan pada Gambar~\ref{fig:dashboard_main}, sedangkan tab \textit{ML/DL Loss and Weight Interpretations} yang menampilkan kurva loss MLP dan bobot koefisien \textit{Linear Regression} ditunjukkan pada Gambar~\ref{fig:loss_weight}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{1781275763766_image.png}
+    \caption{Tab ML/DL Loss and Weight Interpretations: Kurva Training Loss MLP (kiri) dan Bobot Kontribusi Fitur Linear Regression (kanan)}
+    \label{fig:loss_weight}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{1781275782251_image.png}
+    \caption{Tab Single Prediction Dashboard: Perbandingan Prediksi Real-Time Seluruh Model dengan Tag Badge Kategori Model DKA, ML, dan DL}
+    \label{fig:dashboard_main}
+\end{figure}
+
+% 4 HASIL & PEMBAHASAN
+\section{Hasil dan Pembahasan}
+\subsection{Analisis Kompleksitas Algoritma Mamdani vs Sugeno}
+Pemrosesan keseluruhan 8.094 baris data bersih menunjukkan perbedaan performa komputasi yang signifikan antara kedua metode. Algoritma Sugeno memproses data jauh lebih cepat karena operasi \textit{Weighted Average} hanya melibatkan penjumlahan sederhana terhadap $k$ konstanta linguistik, sehingga memiliki kompleksitas waktu $\mathcal{O}(k)$. Sebaliknya, metode Mamdani harus mengeksekusi integrasi numerik (\textit{trapezoidal}) pada array grid diskrit untuk proses defuzzifikasi Centroid, menghasilkan kompleksitas $\mathcal{O}(k \times g)$ dengan $g$ sebagai kepadatan titik pada sumbu semesta output, sehingga waktu eksekusinya jauh lebih lambat. Hasil pengukuran waktu eksekusi pada seluruh dataset ditunjukkan pada Tabel~\ref{tab:kompleksitas}.
+
+\begin{table}[H]
+\centering
+\caption{Perbandingan Waktu Komputasi Mamdani vs Sugeno (8.094 sampel)}
+\label{tab:kompleksitas}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Metode} & \textbf{Waktu Total (detik)} & \textbf{Waktu per Sampel (ms)} & \textbf{Speedup} \\
+\midrule
+Mamdani & 4.14 & 0.51 & 1x (baseline) \\
+Sugeno & 0.65 & 0.08 & $\sim$6x lebih cepat \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Hasil ini menunjukkan bahwa Sugeno secara signifikan lebih unggul dan efisien digunakan untuk pemrosesan \textit{big data} atau sistem yang membutuhkan inferensi real-time berkecepatan tinggi.
+
+\subsection{Evaluasi Akurasi Himpunan Fuzzy (Mamdani vs Sugeno)}
+Evaluasi akurasi dilakukan menggunakan tiga metrik utama: \textit{Mean Absolute Error} (MAE), \textit{Mean Squared Error} (MSE), dan \textit{Root Mean Squared Error} (RMSE):
+
+\begin{equation}
+\text{MAE} = \frac{1}{N} \sum_{j=1}^{N} |y^{(j)} - \hat{y}^{(j)}|
+\end{equation}
+
+\begin{equation}
+\text{RMSE} = \sqrt{\frac{1}{N} \sum_{j=1}^{N} (y^{(j)} - \hat{y}^{(j)})^2}
+\end{equation}
+
+Hasil evaluasi terhadap seluruh 8.094 sampel data uji ditunjukkan pada Tabel~\ref{tab:eval_fuzzy}. Metode Sugeno secara konsisten memiliki nilai error yang lebih rendah dibandingkan Mamdani pada ketiga metrik, serta memiliki akurasi toleransi (selisih prediksi dan ground truth $\le 1.0$) yang lebih tinggi.
+
+\begin{table}[H]
+\centering
+\caption{Perbandingan Metrik Akurasi Mamdani vs Sugeno (8.094 sampel)}
+\label{tab:eval_fuzzy}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Metrik} & \textbf{Mamdani} & \textbf{Sugeno} & \textbf{Model Terbaik} \\
+\midrule
+MAE & 1.3320 & 1.2447 & Sugeno \\
+MSE & 2.6351 & 2.2235 & Sugeno \\
+RMSE & 1.6233 & 1.4912 & Sugeno \\
+Korelasi Pearson & 0.1925 & 0.1815 & Mamdani \\
+Akurasi Toleransi ($\pm 1.0$) & 43.1\% & 45.4\% & Sugeno \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Nilai rata-rata (\textit{mean}), standar deviasi, minimum, dan maksimum dari ground truth dibandingkan dengan kedua hasil prediksi ditampilkan pada Tabel~\ref{tab:distribusi}. Terlihat bahwa kedua metode FIS menghasilkan prediksi yang cenderung terpusat di sekitar nilai rating menengah (sekitar 5.0 hingga 5.3), sedangkan ground truth memiliki rata-rata sekitar 6.05. Hal ini terjadi karena dengan lima variabel input dan operator AND berupa minimum dari lima derajat keanggotaan, \textit{firing strength} setiap aturan menjadi relatif kecil sehingga sistem cenderung lebih konservatif dan output lebih terpusat pada kategori medium.
+
+\begin{table}[H]
+\centering
+\caption{Statistik Distribusi Ground Truth vs Prediksi FIS}
+\label{tab:distribusi}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Sumber} & \textbf{Mean} & \textbf{Std} & \textbf{Min} & \textbf{Max} \\
+\midrule
+Ground Truth & 6.050 & 1.033 & 0.700 & 10.000 \\
+Prediksi Mamdani & 5.187 & 1.128 & 2.287 & 8.540 \\
+Prediksi Sugeno & 5.235 & 0.914 & 3.500 & 8.000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Fuzzy Features vs Raw Features pada Linear Regression}
+Pengujian dilanjutkan dengan membandingkan performa model \textit{Linear Regression} from scratch yang dilatih menggunakan lima fitur mentah (\textit{raw input}) dengan model yang dilatih menggunakan 17 fitur fuzzy (15 derajat keanggotaan ditambah 2 hasil inferensi FIS). Hasil pengujian pada data uji (20\% dari total data) ditunjukkan pada Tabel~\ref{tab:linreg}.
+
+\begin{table}[H]
+\centering
+\caption{Perbandingan Linear Regression dengan Fitur Mentah vs Fitur Fuzzy}
+\label{tab:linreg}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Model} & \textbf{MAE} & \textbf{RMSE} & \textbf{$R^2$} \\
+\midrule
+Linear Regression - Raw (5 fitur) & 0.6851 & 0.9064 & 0.2327 \\
+Linear Regression - Fuzzy (17 fitur) & 0.6912 & 0.9165 & 0.2154 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Pada eksperimen Linear Regression, representasi fitur fuzzy 17 dimensi tidak menunjukkan peningkatan performa dibandingkan fitur mentah, dengan selisih MAE dan RMSE yang relatif kecil. Hal ini mengindikasikan bahwa untuk model linear sederhana, transformasi fuzzy tidak banyak menambah informasi baru karena hubungan antar fitur fuzzy bersifat redundan terhadap fitur mentah asalnya.
+
+\subsection{Integrasi Fuzzy dengan Machine Learning (Random Forest dan SVR)}
+Selanjutnya, fitur fuzzy 17 dimensi diujikan pada dua algoritma Machine Learning dari \textit{scikit-learn}, yaitu \textit{Random Forest Regressor} dan \textit{Support Vector Regression} dengan kernel RBF. Hasil pengujian ditunjukkan pada Tabel~\ref{tab:ml}.
+
+\begin{table}[H]
+\centering
+\caption{Perbandingan Random Forest dan SVR dengan Fitur Mentah vs Fitur Fuzzy}
+\label{tab:ml}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Model} & \textbf{MAE} & \textbf{RMSE} \\
+\midrule
+Random Forest - Raw Input & 0.6322 & 0.8577 \\
+Random Forest - Fuzzy Input (17 dim) & 0.6994 & 0.9400 \\
+SVR - Raw Input & 0.6257 & 0.8573 \\
+SVR - Fuzzy Input (17 dim) & 0.6713 & 0.8998 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Pada eksperimen notebook ini, baik Random Forest maupun SVR memberikan performa terbaik ketika dilatih dengan fitur mentah dibandingkan fitur fuzzy 17 dimensi. Fenomena ini berbeda dengan hasil simulasi batch pada dashboard Streamlit (lihat Subbab 4.6), yang menunjukkan bahwa pada skema fuzzy-driven dengan proses pelatihan dan rekayasa fitur yang berbeda, model Random Forest justru mampu mencapai akurasi yang sangat tinggi. Perbedaan ini mengindikasikan bahwa kontribusi fitur fuzzy terhadap performa model sangat bergantung pada konfigurasi pelatihan, jumlah data, serta cara fitur fuzzy tersebut dikombinasikan dengan fitur lain.
+
+\subsection{Integrasi Fuzzy dengan Deep Learning (MLP from Scratch)}
+Model \textit{Multi-Layer Perceptron} (MLP) yang dibangun \textit{from scratch} dilatih selama 500 epoch pada fitur mentah dan fitur fuzzy 17 dimensi. Hasil evaluasi pada data uji ditunjukkan pada Tabel~\ref{tab:mlp}, sedangkan kurva penurunan loss (MSE) selama pelatihan ditunjukkan pada Gambar~\ref{fig:loss_weight} sebelumnya.
+
+\begin{table}[H]
+\centering
+\caption{Perbandingan MLP from Scratch dengan Fitur Mentah vs Fitur Fuzzy}
+\label{tab:mlp}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Model} & \textbf{MAE} & \textbf{RMSE} \\
+\midrule
+MLP Neural Network - Raw Input & 0.6363 & 0.8667 \\
+MLP Neural Network - Fuzzy Input (17 dim) & 0.6926 & 0.9232 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Sejalan dengan hasil pada Random Forest dan SVR, model MLP yang dilatih dengan fitur mentah memberikan MAE dan RMSE yang sedikit lebih baik dibandingkan model dengan fitur fuzzy pada eksperimen 8.094 sampel ini. Kurva training loss pada Gambar~\ref{fig:loss_weight} menunjukkan konvergensi yang cepat pada beberapa puluh epoch awal, kemudian melandai secara stabil hingga epoch ke-500, menandakan proses backpropagation dan optimasi SGD berjalan dengan baik tanpa indikasi overfitting yang signifikan pada rentang epoch yang diuji.
+
+\subsection{Simulasi Batch pada Dashboard Streamlit (300 Sampel)}
+Selain evaluasi pada notebook, dashboard Streamlit menyediakan fitur \textit{Batch Evaluation and Simulation} yang melakukan prediksi terhadap 300 sampel acak menggunakan keenam model (\textit{Mamdani FIS, Sugeno FIS, Fuzzy-Driven Linear Regression, Fuzzy-Driven Random Forest, Fuzzy-Driven SVR}, dan \textit{Fuzzy-Driven Neural Network}). Hasil simulasi ditunjukkan pada Tabel~\ref{tab:batch} dan divisualisasikan pada Gambar~\ref{fig:batch_eval}.
+
+\begin{table}[H]
+\centering
+\caption{Hasil Simulasi Batch 300 Sampel pada Dashboard Streamlit}
+\label{tab:batch}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Metode} & \textbf{MAE} & \textbf{MSE} & \textbf{RMSE} & \textbf{Korelasi Pearson} & \textbf{Akurasi Toleransi ($\pm 1.0$)} \\
+\midrule
+Mamdani FIS & 2.2369 & 7.1064 & 2.6658 & 0.1849 & 24.67\% \\
+Sugeno FIS & 1.6740 & 4.0295 & 2.0074 & 0.1871 & 33.00\% \\
+Fuzzy-Driven Linear Regression & 0.6727 & 0.7958 & 0.8921 & 0.5048 & 77.67\% \\
+Fuzzy-Driven Random Forest & 0.2896 & 0.1499 & 0.3871 & 0.9515 & 98.33\% \\
+Fuzzy-Driven SVR & 0.5404 & 0.6372 & 0.7982 & 0.6476 & 83.00\% \\
+Fuzzy-Driven Neural Net (DL) & 0.4385 & 0.4130 & 0.6426 & 0.7924 & 89.33\% \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{1781275767301_image.png}
+    \caption{Tab Batch Evaluation and Simulation: Tabel Metrik dan Visualisasi Scatter Plot Prediksi vs Ground Truth}
+    \label{fig:batch_eval}
+\end{figure}
+
+Hasil simulasi batch pada Tabel~\ref{tab:batch} memperlihatkan pola yang konsisten dengan analisis sebelumnya, yaitu Sugeno FIS lebih unggul dibandingkan Mamdani FIS pada seluruh metrik. Lebih lanjut, seluruh model hybrid yang memanfaatkan fitur fuzzy (\textit{Fuzzy-Driven}) menghasilkan peningkatan akurasi yang sangat signifikan dibandingkan FIS murni, dengan Fuzzy-Driven Random Forest mencapai korelasi Pearson sebesar 0.9515 dan akurasi toleransi sebesar 98.33\%, jauh melampaui Mamdani (24.67\%) dan Sugeno (33.00\%). 
+
+Hal ini menegaskan bahwa meskipun pada eksperimen notebook dengan 8.094 sampel fitur fuzzy belum memberikan keunggulan signifikan dibandingkan fitur mentah, pada skema dashboard, kombinasi derajat keanggotaan fuzzy dengan algoritma ensemble seperti Random Forest tetap menjadi pendekatan yang sangat efektif untuk menangkap pola non-linear pada data prediksi rating film. Sebagai gambaran tambahan, diagram pencar antara prediksi Deep Learning maupun Random Forest terhadap ground truth pada Gambar~\ref{fig:batch_eval} menunjukkan titik-titik data yang terkonsentrasi di sekitar garis ideal ($y = x$), sedangkan distribusi error Mamdani memiliki rentang yang jauh lebih lebar dibandingkan error model Deep Learning.
+
+% 5 KESIMPULAN
+\section{Kesimpulan}
+Berdasarkan seluruh hasil pengujian dan analisis yang telah dilakukan, dapat disimpulkan beberapa hal sebagai berikut:
+\begin{enumerate}
+    \item Metode Sugeno secara konsisten lebih unggul dibandingkan Mamdani, baik dari segi akurasi prediksi (MAE, MSE, RMSE, dan akurasi toleransi) maupun kompleksitas waktu komputasi, dengan Sugeno sekitar 6 kali lebih cepat dibandingkan Mamdani pada pemrosesan 8.094 sampel data.
+    \item Kontribusi fitur fuzzy 17 dimensi terhadap performa model Machine Learning (\textit{Linear Regression, Random Forest, SVR}) dan model Deep Learning (\textit{MLP from scratch}) bersifat bergantung konteks. Pada eksperimen notebook dengan 8.094 sampel, fitur mentah memberikan performa yang sedikit lebih baik, sedangkan pada simulasi batch dashboard dengan skema \textit{fuzzy-driven}, model Random Forest berbasis fitur fuzzy mencapai akurasi tertinggi (korelasi Pearson 0.9515, akurasi toleransi 98.33\%).
+    \item Model Deep Learning berupa \textit{Multi-Layer Perceptron} yang dibangun \textit{from scratch} berhasil dilatih hingga konvergen dengan penurunan loss MSE yang stabil selama 500 epoch, dan pada simulasi batch dashboard memberikan akurasi toleransi sebesar 89.33\%, menempatkannya sebagai model dengan performa terbaik kedua setelah Random Forest.
+    \item Seluruh sistem (\textit{Mamdani, Sugeno, Linear Regression, Random Forest, SVR, dan MLP}) berhasil diintegrasikan ke dalam dashboard web interaktif berbasis Streamlit yang terdiri atas empat tab (\textit{Single Prediction Dashboard, Membership Functions, Batch Evaluation and Simulation, serta ML/DL Loss and Weight Interpretations}), sehingga pengguna dapat membandingkan prediksi seluruh model secara real-time tanpa harus menjalankan ulang notebook.
+    \item Secara keseluruhan, pendekatan hybrid yang menggabungkan penalaran berbasis pengetahuan pakar (\textit{Fuzzy Logic}) dengan algoritma data-driven (\textit{Machine Learning} dan \textit{Deep Learning}) terbukti dapat meningkatkan akurasi prediksi rating film secara signifikan dibandingkan penggunaan sistem Fuzzy murni.
+\end{enumerate}
+
+% REFERENSI (PUSTAKA)
+\begin{thebibliography}{99}
+\bibitem{zadeh} L. A. Zadeh, "Fuzzy sets," \textit{Information and Control}, vol. 8, no. 3, pp. 338-353, 1965.
+\bibitem{mamdani} E. H. Mamdani and S. Assilian, "An experiment in linguistic synthesis with a fuzzy logic controller," \textit{International Journal of Man-Machine Studies}, vol. 7, no. 1, pp. 1-13, 1975.
+\bibitem{sugeno} T. Takagi and M. Sugeno, "Fuzzy identification of systems and its applications to modeling and control," \textit{IEEE Transactions on Systems, Man, and Cybernetics}, vol. SMC-15, no. 1, pp. 116-132, 1985.
+\bibitem{dataset} Rounak Banik, "The Movies Dataset," \textit{Kaggle}, 2017. [Online]. Available: \url{https://www.kaggle.com/datasets/rounakbanik/the-movies-dataset}
+\bibitem{suyanto} Suyanto, "Reasoning: Fuzzy Systems," \textit{Modul Perkuliahan Dasar Kecerdasan Artifisial}, School of Computing, Telkom University, 2024.
+\bibitem{streamlit} Streamlit Inc., "Streamlit Documentation," 2024. [Online]. Available: \url{https://docs.streamlit.io/}
+\bibitem{scikit} F. Pedregosa et al., "Scikit-learn: Machine Learning in Python," \textit{Journal of Machine Learning Research}, vol. 12, pp. 2825-2830, 2011.
+\end{thebibliography}
+
+% LAMPIRAN
+\section*{Lampiran}
+\addcontentsline{toc}{section}{Lampiran}
+Kode sumber lengkap (\textit{source code}), notebook analisis, dataset turunan, serta implementasi antarmuka dashboard web Streamlit dapat diakses secara publik melalui repositori GitHub dan aplikasi web berikut:
+\begin{itemize}
+    \item \textbf{Repositori GitHub:} \url{https://github.com/ryanmaulanabp/movie-rating}
+    \item \textbf{Dashboard Web Streamlit:} \url{https://ryanmaulanabp-movie-rating-webstreamlitdkaapp-gvu3sj.streamlit.app/}
+\end{itemize}
+
+\end{document}
