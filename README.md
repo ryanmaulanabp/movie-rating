@@ -42,26 +42,8 @@ Proyek ini menggunakan dataset riil **TMDb Movie Dataset** dengan 5 variabel inp
 
 ---
 
-## 💻 Cara Menjalankan Project
-
-### 1. Prasyarat & Instalasi Pustaka (Prerequisites)
-Pastikan Python sudah terinstal di komputer Anda. 
-
-Jika teman Anda mendapati error **`'pip' is not recognized as an internal or external command`**, hal ini disebabkan karena executable `pip` tidak berada di dalam Environment PATH Windows. Anda dapat mengatasinya dengan memanggil modul `pip` melalui executable `python`.
-
-Jalankan perintah berikut di Command Prompt (CMD) Anda untuk menginstal semua dependensi otomatis menggunakan file `requirements.txt`:
+## 💻 Cara Akses Project
 
 ```bash
-python -m pip install -r requirements.txt
+[python -m pip install -r requirements.txt](https://ryanmaulanabp-movie-rating-webstreamlitdkaapp-gvu3sj.streamlit.app/)
 ```
-
-*(Perintah di atas akan menginstal library: `streamlit`, `numpy`, `pandas`, `matplotlib`, `scikit-learn`, `kagglehub`, dan `scipy`)*.
-
-### 2. Jalankan Dashboard Streamlit
-Untuk menjalankan versi lengkap yang terintegrasi dengan Machine Learning dan Deep Learning (v2):
-
-```bash
-python -m streamlit run "Web Streamlit DKA/appv2.py" --server.port 8502
-```
-
-Buka browser Anda dan akses tautan: `http://localhost:8502`
