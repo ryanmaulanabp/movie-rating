@@ -36,6 +36,7 @@ Proyek ini menggunakan dataset riil **TMDb Movie Dataset** dengan 5 variabel inp
 ├── Web Streamlit DKA/
 │   ├── app.py             # Versi awal (Fuzzy & Linear Regression saja)
 │   ├── appv2.py           # Versi lengkap (Fuzzy, ML (RF, SVR), & Deep Learning MLP)
+├── requirements.txt       # Daftar pustaka dependensi proyek
 ├── README.md
 ```
 
@@ -43,12 +44,18 @@ Proyek ini menggunakan dataset riil **TMDb Movie Dataset** dengan 5 variabel inp
 
 ## 💻 Cara Menjalankan Project
 
-### 1. Prasyarat (Prerequisites)
-Pastikan Python sudah terinstal di komputer Anda. Instal pustaka pendukung dengan menjalankan perintah berikut:
+### 1. Prasyarat & Instalasi Pustaka (Prerequisites)
+Pastikan Python sudah terinstal di komputer Anda. 
+
+Jika teman Anda mendapati error **`'pip' is not recognized as an internal or external command`**, hal ini disebabkan karena executable `pip` tidak berada di dalam Environment PATH Windows. Anda dapat mengatasinya dengan memanggil modul `pip` melalui executable `python`.
+
+Jalankan perintah berikut di Command Prompt (CMD) Anda untuk menginstal semua dependensi otomatis menggunakan file `requirements.txt`:
 
 ```bash
-pip install streamlit numpy pandas matplotlib scipy scikit-learn kagglehub
+python -m pip install -r requirements.txt
 ```
+
+*(Perintah di atas akan menginstal library: `streamlit`, `numpy`, `pandas`, `matplotlib`, `scikit-learn`, `kagglehub`, dan `scipy`)*.
 
 ### 2. Jalankan Dashboard Streamlit
 Untuk menjalankan versi lengkap yang terintegrasi dengan Machine Learning dan Deep Learning (v2):
