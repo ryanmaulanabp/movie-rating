@@ -45,5 +45,5 @@ Proyek ini menggunakan dataset riil **TMDb Movie Dataset** dengan 5 variabel inp
 ## 💻 Cara Akses Project
 
 ```bash
-[python -m pip install -r requirements.txt](https://ryanmaulanabp-movie-rating-webstreamlitdkaapp-gvu3sj.streamlit.app/)
+https://ryanmaulanabp-movie-rating-webstreamlitdkaapp-gvu3sj.streamlit.app/
 ```
