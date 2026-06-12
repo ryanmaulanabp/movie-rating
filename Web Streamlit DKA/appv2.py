@@ -552,7 +552,7 @@ with tab1:
         <div class="card highlight-mamdani">
             <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
                 Mamdani FIS Predictor
-                <span style="font-size: 0.7rem; background-color: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 9999px; font-weight: 600; text-transform: uppercase;">DKA (Fuzzy)</span>
+                <span style="font-size: 0.7rem; background-color: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 9999px; font-weight: 600; text-transform: uppercase; white-space: nowrap;">DKA | Fuzzy</span>
             </div>
             <div style="font-size: 2.2rem; font-weight: 700; color: #0f172a; margin: 8px 0;">{mamdani_pred:.4f}</div>
             <div style="font-size: 0.8rem; color: #64748b;">Defuzzification: Centroid (Numerical Integration)</div>
@@ -563,7 +563,7 @@ with tab1:
         <div class="card highlight-sugeno">
             <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
                 Sugeno FIS Predictor
-                <span style="font-size: 0.7rem; background-color: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 9999px; font-weight: 600; text-transform: uppercase;">DKA (Fuzzy)</span>
+                <span style="font-size: 0.7rem; background-color: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 9999px; font-weight: 600; text-transform: uppercase; white-space: nowrap;">DKA | Fuzzy</span>
             </div>
             <div style="font-size: 2.2rem; font-weight: 700; color: #0f172a; margin: 8px 0;">{sugeno_pred:.4f}</div>
             <div style="font-size: 0.8rem; color: #64748b;">Defuzzification: Weighted Average (Zero-Order)</div>
@@ -576,7 +576,7 @@ with tab1:
         <div class="card highlight-linreg">
             <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
                 Fuzzy-Driven Linear Regression
-                <span style="font-size: 0.7rem; background-color: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 9999px; font-weight: 600; text-transform: uppercase;">ML (Machine Learning)</span>
+                <span style="font-size: 0.7rem; background-color: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 9999px; font-weight: 600; text-transform: uppercase; white-space: nowrap;">ML Model</span>
             </div>
             <div style="font-size: 2.2rem; font-weight: 700; color: #0f172a; margin: 8px 0;">{linreg_pred:.4f}</div>
             <div style="font-size: 0.8rem; color: #64748b;">Normal Equation (17-Dim Feature Space)</div>
@@ -587,7 +587,7 @@ with tab1:
         <div class="card highlight-rf">
             <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
                 Fuzzy-Driven Random Forest
-                <span style="font-size: 0.7rem; background-color: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 9999px; font-weight: 600; text-transform: uppercase;">ML (Machine Learning)</span>
+                <span style="font-size: 0.7rem; background-color: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 9999px; font-weight: 600; text-transform: uppercase; white-space: nowrap;">ML Model</span>
             </div>
             <div style="font-size: 2.2rem; font-weight: 700; color: #0f172a; margin: 8px 0;">{rf_pred:.4f}</div>
             <div style="font-size: 0.8rem; color: #64748b;">Ensemble of 100 Trees on Fuzzy MFs</div>
@@ -598,7 +598,7 @@ with tab1:
         <div class="card highlight-svr">
             <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
                 Fuzzy-Driven SVR
-                <span style="font-size: 0.7rem; background-color: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 9999px; font-weight: 600; text-transform: uppercase;">ML (Machine Learning)</span>
+                <span style="font-size: 0.7rem; background-color: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 9999px; font-weight: 600; text-transform: uppercase; white-space: nowrap;">ML Model</span>
             </div>
             <div style="font-size: 2.2rem; font-weight: 700; color: #0f172a; margin: 8px 0;">{svr_pred:.4f}</div>
             <div style="font-size: 0.8rem; color: #64748b;">Radial Basis Function (RBF) Kernel SVR</div>
@@ -611,7 +611,7 @@ with tab1:
         <div class="card highlight-dl">
             <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: bold; display: flex; align-items: center; justify-content: space-between;">
                 Fuzzy-Driven Neural Network (MLP)
-                <span style="font-size: 0.7rem; background-color: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 9999px; font-weight: 600; text-transform: uppercase;">DL (Deep Learning)</span>
+                <span style="font-size: 0.7rem; background-color: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 9999px; font-weight: 600; text-transform: uppercase; white-space: nowrap;">DL Model</span>
             </div>
             <div style="font-size: 2.2rem; font-weight: 700; color: #0f172a; margin: 8px 0;">{dl_pred:.4f}</div>
             <div style="font-size: 0.8rem; color: #64748b;">3-Layer MLP (17 &rarr; 32 &rarr; 16 &rarr; 1) From Scratch</div>
